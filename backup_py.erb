@@ -1,0 +1,82 @@
+#!/usr/bin/python -W ignore
+
+import datetime,sys,time, cgi, os
+from datetime import date, timedelta
+reload (sys)
+from time import *
+path="<%= @backup_source_path %>"
+sys.path.append(path+"/conf/")
+postgres_db=''
+mysql_db=''
+
+f = open(path+'/db.list')
+lines = f.readlines()
+f.close()
+postgres_db=(lines[0].split('postgres:')[1]).rstrip()
+mysql_db=(lines[1].split('mysql:')[1]).rstrip()
+
+postgres_db = ((postgres_db.replace('[', '')).replace(']', '')).replace(' ', '')
+mysql_db = ((mysql_db.replace('[', '')).replace(']', '')).replace(' ', '')
+
+postgres_db = postgres_db.split(',')
+mysql_db = mysql_db.split(',')
+
+first_day = date.today()
+last_day = first_day - timedelta(days=2)
+cutoff_date=last_day.strftime("%Y%m%d")
+    
+
+from setup_conf import *
+from Logger import *
+ 
+def mkdirp(directory):
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
+def start_mon():
+
+    
+    machine="<%= @hostname %>"
+    t= strftime("%Y-%m-%d %H:%M:%S", localtime())
+    mon=strftime("%m", localtime())
+    year=strftime("%Y", localtime())
+    day=strftime("%d", localtime())
+    when =datetime.date.today()
+    day_of_week=when.strftime("%w")
+    day_of_month=when.strftime("%d")
+    ldat=year+mon+day
+    bdir=os.popen('curl -fs http://metadata.google.internal/computeMetadata/v1/instance/attributes/igroup -H "Metadata-Flavor: Google" ')
+    backup_dir='/srv/shared/database-backup/'
+     
+    try:
+ 	
+	    for i in range(len(postgres_db)):
+                if postgres_db[i]!='':
+                    mkdirp("%s%s/%s" % (backup_dir,machine,postgres_db[i]))
+                    postgres_backup(postgres_db[i],machine)
+                    bdir1=os.popen('sudo find /srv/shared/database-backup/%s/%s/* -mtime +2 -exec rm {} \;' % (machine,postgres_db[i]))
+                #end if
+	    #end if
+	    
+	    for i in range(len(mysql_db)):
+	        if mysql_db[i]!='':
+	            mkdirp("%s%s/%s" % (backup_dir,machine,mysql_db[i]))
+	            mysql_backup(mysql_db[i],machine)
+	            bdir1=os.popen('sudo find /srv/shared/database-backup/%s/%s/* -mtime +2 -exec rm {} \;' % (machine,mysql_db[i]))
+	        #end if
+	    #end if
+	    
+	    
+	    
+        
+    except:
+        
+        print "Error No. 1"
+        raise
+    
+# end def start_mon()
+            
+if __name__ == "__main__":
+    start_mon()
+
+# end if

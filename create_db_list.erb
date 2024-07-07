@@ -1,0 +1,65 @@
+#!/usr/bin/python -W ignore
+
+import datetime,sys,time, cgi, os,MySQLdb
+import shutil
+
+reload (sys)
+
+from time import *
+from datetime import date, timedelta
+
+def start_mon():
+
+    mip=os.popen("gcloud compute addresses describe ts-mgmt1 --region=us-central1 --format=flattened --format='value(address)' | /usr/bin/awk 'FNR == 1 {print $0}'")
+    mgmtip=(mip.readline()).rstrip()
+    db_conn=MySQLdb.connect(host=mgmtip,port=3306,unix_socket="/var/lib/mysql/mysql.sock",user="master",passwd="btmor499",db="mgmt-dashboard" )
+    db_cur2 = db_conn.cursor()
+    t= strftime("%Y-%m-%d %H:%M:%S", localtime())
+    try:
+
+        aa1a=os.popen("hostname")
+        hostname=aa1a.readline()
+        hname=hostname.rstrip()
+        db1_name=''
+        db2_name=''
+
+        t= strftime("%Y-%m-%d %H:%M:%S", localtime())
+        db_cur2.execute("select db_name from `mgmt-dashboard`.dbase where db_type='mysql' and hostname='%s' " % (hname) )
+        rows= db_cur2.fetchall()
+        db_type1="mysql:"
+        for nrows in rows:
+            name1=nrows[0]
+            db1_name=db1_name+','+name1
+        #end for
+        db1_name=db1_name.lstrip(",")
+        db1_name=db_type1+db1_name
+        db_cur2.execute("select db_name from `mgmt-dashboard`.dbase where db_type='postgres' and hostname='%s' " % (hname) )
+        rows= db_cur2.fetchall()
+        db_type2="postgres:"
+        for nrows in rows:
+            name2=nrows[0]
+            db2_name=db2_name+','+name2
+        #end for
+        db2_name=db2_name.lstrip(",")
+        db2_name=db_type2+db2_name
+
+        f = open("/opt/admincloud/database_backup/db.list","w")
+        f.write(db2_name+'\n')
+        f.write(db1_name)
+        f.close()
+
+
+        db_conn.commit()
+        db_conn.close()
+        mip.close()
+    except:
+        #db_conn.close()
+        mip.close()
+        print "Error No. 1"
+        raise
+
+
+# end def start_mon()
+
+if __name__ == "__main__":
+    start_mon()

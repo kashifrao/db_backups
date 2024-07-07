@@ -1,0 +1,16 @@
+#!/usr/bin/python -W ignore
+
+import time, cgi, os,sys
+
+
+def log_write(database_name,db_size,machine_name,file_n,time_taken):
+    db_size = os.path.getsize(file_n) 
+    t1 = time.localtime()
+    desc="%s : %s successfully backed up." % (machine_name,database_name)
+    t= time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    fd = open('/var/log/db_backups.log', 'a+')
+    fd.write('%s, %s, %s, %s, %s \n' % (t, desc, database_name, db_size, time_taken ))
+    fd.flush()
+    fd.close()
+
+# end def

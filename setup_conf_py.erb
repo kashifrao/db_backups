@@ -1,0 +1,55 @@
+#!/usr/bin/python
+
+import datetime,sys,time, cgi, os
+import shutil
+
+reload (sys)
+
+from time import *
+
+path="<%= @backup_source_path %>"
+sys.path.append(path+"/conf/")
+
+from setup_conf import *
+from Logger import *
+
+mon=strftime("%m", localtime())
+year=strftime("%Y", localtime())
+day=strftime("%d", localtime())
+when =datetime.date.today()
+day_of_week=when.strftime("%w")
+day_of_month=when.strftime("%d")
+ldat=year+mon+day
+t1= strftime("%Y-%m-%d %H:%M:%S", localtime())    
+ldat=strftime("%Y%m%d_%H:%M:%S", localtime())
+bdir=os.popen('curl -fs http://metadata.google.internal/computeMetadata/v1/instance/attributes/igroup -H "Metadata-Flavor: Google" ')
+backup_dir='/srv/shared/database-backup/'
+
+def mkdirp(directory):
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
+def postgres_backup(database_name,machine):
+    t1= strftime("%Y-%m-%d %H:%M:%S", localtime())
+    cmd_run=os.popen("pg_dump -U master   %s | gzip > %s%s/%s/%s_%s.gz " % (database_name,backup_dir,machine,database_name,database_name,ldat))
+    cmd_run.close();
+    file='%s%s/%s/%s.gz_%s' % (backup_dir,machine,database_name,database_name,ldat)
+    t2=strftime("%Y-%m-%d %H:%M:%S", localtime())
+    total_time=strftime("%S", localtime(mktime(strptime(str(t2).replace('.00', ''), "%Y-%m-%d %X"))-mktime(strptime(str(t1).replace('.00', ''), "%Y-%m-%d %X"))))
+    file_n=("%s%s/%s/%s_%s.gz" % (backup_dir,machine,database_name,database_name,ldat))
+    db_size = os.stat(file_n).st_size
+    log_write(database_name,db_size,machine,file_n,total_time)
+
+
+
+def mysql_backup(database_name,machine):
+    t1= strftime("%Y-%m-%d %H:%M:%S", localtime())
+    cmd_run=os.popen("/usr/bin/mysqldump -u master -pbtmor499  %s --quick --single-transaction | gzip > %s%s/%s/%s_%s.gz " % (database_name,backup_dir,machine,database_name,database_name,ldat))
+    cmd_run.close();
+    file='%s%s/%s/%s.gz_%s' % (backup_dir,machine,database_name,database_name,ldat)
+    t2=strftime("%Y-%m-%d %H:%M:%S", localtime())
+    total_time=strftime("%S", localtime(mktime(strptime(str(t2).replace('.00', ''), "%Y-%m-%d %X"))-mktime(strptime(str(t1).replace('.00', ''), "%Y-%m-%d %X"))))
+    file_n=("%s%s/%s/%s_%s.gz" % (backup_dir,machine,database_name,database_name,ldat))
+    db_size = os.stat(file_n).st_size
+    log_write(database_name,db_size,machine,file_n,total_time)
+
